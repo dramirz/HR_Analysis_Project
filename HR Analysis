@@ -1,0 +1,95 @@
+--Table Creation, Views, Window_Functions, Union, CTE, Data Exploration
+
+Create Table hr ( --After creating this table on SQL server, I copied and pasted the rows from MFGEmployees.XLSX
+Employee_Number int,
+Surname varchar(50),
+GivenName varchar(50),	
+Gender varchar(10),
+City	 varchar(50),
+Job_Title varchar(50),	
+Department_Name varchar(25),
+Store_Location varchar(40),
+Division varchar(45),
+Age decimal(4,2),
+Length_Service decimal(4,2),
+Absent_Hours decimal(5,2),
+Business_Unit varchar(25)
+)
+
+Create View hrsummary as --Creates a VIEW
+select 
+Count(Employee_number) as Number_of_Employees, Gender, Department_Name, Job_Title,
+AVG(Age) as Average_Age, 
+AVG(Length_Service) as Avg_Length_of_Service,--(Years)
+AVG(Absent_Hours) as Avg_Time_Off, --(Hours)
+Min(Absent_Hours) as Minimum_Time_Off, --(Hours)
+Max(Absent_Hours) as Max_Time_Off, --(Hours)
+SUM(Absent_Hours) as Total_Time_Off --(Hours)
+from hr 
+GROUP BY Gender, Job_Title, Department_Name, Job_Title
+
+
+--Gets the number of employees that are ranked in top 12 in Total_Time_Off
+select Sum(total) as sum_most_absent_employees from(select Dense_Rank() over(order by Total_Time_Off desc) as Ranking, Sum(Number_of_Employees) as total,Department_Name 
+from(select * from hrsummary) s
+GROUP BY Department_Name, Total_Time_Off) s0
+Where Ranking < 13
+
+
+
+--Gets the number of employees that are ranked higher than 12 in Total_Time_OFF
+select Sum(total) as sum_least_absent_employees from(select Dense_Rank() over(order by Total_Time_Off desc) as Ranking, Sum(Number_of_Employees) as total,Department_Name 
+from(select * from hrsummary) s
+GROUP BY Department_Name, Total_Time_Off) s0
+Where Ranking > 12
+
+--Shows by department the total amount of absenteeism
+select Department_Name, Avg_Length_of_Service, Total_Time_Off from hrsummary
+Order by Total_Time_Off desc
+
+
+--Shows the number of employees, Time_off_Average_Age for those workers working with company up to 10 years and more
+--than 11 years
+Select Count(Employee_Number) count_of_employees,sum(Absent_Hours)as Time_Off,AVG(Age) as Average_Age from hr
+Where Length_Service between 0 AND 10.99--Length_Service >= 11
+
+
+--Shows are age plays a factor in absenteeism
+Select Count(Employee_Number) count_of_employees,sum(Absent_Hours)as Time_Off,AVG(Length_Service) as Length_of_Service from hr
+Where Age Between 18 AND 30 --Between 31 AND 65
+
+
+Select s.* from(Select Employee_Number,Department_Name, Absent_Hours, Job_Title,
+row_number() over (partition by Department_Name order by Absent_Hours desc) as department
+from hr h GROUP BY Department_Name, Absent_Hours, Job_Title, Employee_Number)s
+Where Absent_Hours = 0
+
+
+Create View total_top_12 as --VIEW
+With CTE as(
+Select Department_Name, Gender,Job_Title, Absent_Hours as Time_Off from hr)
+
+Select Sum(Time_Off) as total_top_12 from (Select 
+Top 12 Department_Name, 
+Gender,
+Job_Title, 
+SUM(Time_Off)as Time_Off 
+from CTE 
+GROUP BY Department_Name, Job_Title, Gender 
+Order by Time_Off desc) s
+
+
+Create View dept_total as --View
+With CTE as(Select Department_Name, Gender,Job_Title, SUM(Absent_Hours) as Time_Off 
+from hr GROUP BY Department_Name, Gender, Job_Title)
+
+Select Sum(Time_Off) as remaining_dept_total from 
+(Select Department_Name, Gender, Job_Title, Time_Off as Time_Off, 
+Dense_Rank() over(Order by Time_Off desc) as Ranking from CTE 
+GROUP BY Department_Name, Gender, Job_Title, CTE.Time_Off) s
+Where Ranking > 12
+
+
+Select Sum(total_top_12) total_absent_hours from(select * from total_top_12
+Union
+select * from dept_total) s
