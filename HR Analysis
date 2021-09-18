@@ -29,19 +29,11 @@ from hr
 GROUP BY Gender, Job_Title, Department_Name, Job_Title
 
 
---Gets the number of employees that are ranked in top 12 in Total_Time_Off
-select Sum(total) as sum_most_absent_employees from(select Dense_Rank() over(order by Total_Time_Off desc) as Ranking, Sum(Number_of_Employees) as total,Department_Name 
-from(select * from hrsummary) s
-GROUP BY Department_Name, Total_Time_Off) s0
-Where Ranking < 13
 
 
 
---Gets the number of employees that are ranked higher than 12 in Total_Time_OFF
-select Sum(total) as sum_least_absent_employees from(select Dense_Rank() over(order by Total_Time_Off desc) as Ranking, Sum(Number_of_Employees) as total,Department_Name 
-from(select * from hrsummary) s
-GROUP BY Department_Name, Total_Time_Off) s0
-Where Ranking > 12
+
+
 
 --Shows by department the total amount of absenteeism
 select Department_Name, Avg_Length_of_Service, Total_Time_Off from hrsummary
@@ -59,37 +51,7 @@ Select Count(Employee_Number) count_of_employees,sum(Absent_Hours)as Time_Off,AV
 Where Age Between 18 AND 30 --Between 31 AND 65
 
 
-Select s.* from(Select Employee_Number,Department_Name, Absent_Hours, Job_Title,
-row_number() over (partition by Department_Name order by Absent_Hours desc) as department
-from hr h GROUP BY Department_Name, Absent_Hours, Job_Title, Employee_Number)s
-Where Absent_Hours = 0
 
 
-Create View total_top_12 as --VIEW
-With CTE as(
-Select Department_Name, Gender,Job_Title, Absent_Hours as Time_Off from hr)
-
-Select Sum(Time_Off) as total_top_12 from (Select 
-Top 12 Department_Name, 
-Gender,
-Job_Title, 
-SUM(Time_Off)as Time_Off 
-from CTE 
-GROUP BY Department_Name, Job_Title, Gender 
-Order by Time_Off desc) s
 
 
-Create View dept_total as --View
-With CTE as(Select Department_Name, Gender,Job_Title, SUM(Absent_Hours) as Time_Off 
-from hr GROUP BY Department_Name, Gender, Job_Title)
-
-Select Sum(Time_Off) as remaining_dept_total from 
-(Select Department_Name, Gender, Job_Title, Time_Off as Time_Off, 
-Dense_Rank() over(Order by Time_Off desc) as Ranking from CTE 
-GROUP BY Department_Name, Gender, Job_Title, CTE.Time_Off) s
-Where Ranking > 12
-
-
-Select Sum(total_top_12) total_absent_hours from(select * from total_top_12
-Union
-select * from dept_total) s
