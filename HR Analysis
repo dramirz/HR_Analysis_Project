@@ -1,11 +1,24 @@
---Table Creation, Views, Window_Functions, Union, CTE, Data Exploration
+--Author: Daniel Ramirez
+--Email: danramirz@gmail.com
 
-Create Table hr ( --After creating this table on SQL server, I copied and pasted the rows from MFGEmployees.XLSX
+--Below you find examples of the following:
+        --1.Table creations
+        --2.View creations
+        --3.Nested Query
+        --4.Dense_Rank
+        --5.Aggregates: SUM, AVG, MIN, MAX, COUNT
+        --6.Querying a view
+
+---------------------------------------------------------------------------------------------------------
+
+--Table Creation
+--After creating this table on SQL server, I copied and pasted the rows from MFGEmployees.XLSX
+Create Table hr ( 
 Employee_Number int,
 Surname varchar(50),
 GivenName varchar(50),	
 Gender varchar(10),
-City	 varchar(50),
+City varchar(50),
 Job_Title varchar(50),	
 Department_Name varchar(25),
 Store_Location varchar(40),
@@ -16,42 +29,77 @@ Absent_Hours decimal(5,2),
 Business_Unit varchar(25)
 )
 
-Create View hrsummary as --Creates a VIEW
-select 
-Count(Employee_number) as Number_of_Employees, Gender, Department_Name, Job_Title,
-AVG(Age) as Average_Age, 
-AVG(Length_Service) as Avg_Length_of_Service,--(Years)
-AVG(Absent_Hours) as Avg_Time_Off, --(Hours)
-Min(Absent_Hours) as Minimum_Time_Off, --(Hours)
-Max(Absent_Hours) as Max_Time_Off, --(Hours)
-SUM(Absent_Hours) as Total_Time_Off --(Hours)
-from hr 
+-------------------------------------------------------------------------------------------------------
+--View Creation
+--Summary Stats
+
+Create View hrsummary as
+Select 
+    Count(Employee_number) as Number_of_Employees, 
+    Gender, 
+    Department_Name, 
+    Job_Title,
+    AVG(Age) as Average_Age, 
+    AVG(Length_Service) as Avg_Length_of_Service,
+    AVG(Absent_Hours) as Avg_Time_Off,
+    Min(Absent_Hours) as Minimum_Time_Off,
+    Max(Absent_Hours) as Max_Time_Off,
+    SUM(Absent_Hours) as Total_Time_Off
+From hr 
 GROUP BY Gender, Job_Title, Department_Name, Job_Title
 
+-------------------------------------------------------------------------------------------------------
+--Dense_Rank
+--Nested Subquery
+--Summary information
+--querying a view
 
+Select 
+    Sum(t_time_off)as t_time_off,
+    Sum(n_total_employees) as n_empmloyees,
+    AVG(avg_length_of_service)as avg_length_of_service,
+    AVG(avg_time_off)as avg_time_off from
+(Select 
+    Dense_Rank() over(order by Total_Time_Off desc) as Ranking,
+    Sum(Total_Time_Off) as t_time_off,
+    Sum(Number_of_Employees) as n_total_employees,Department_Name,
+    Avg(Avg_Length_of_Service) as avg_length_of_service,
+    AVG(Avg_Time_Off) as avg_time_off
+From
+    (Select * From hrsummary) hrsummary_ranking
+GROUP BY Department_Name, Total_Time_Off)summary_information
+WHERE Department_Name  NOT IN ('Customer Service','Dairy','Meats','Bakery','Produce','Processed Foods')
 
+-------------------------------------------------------------------------------------------------------
+--Subquery
+--Length of service insights
 
+Select 
+    Sum(count_of_employees) as t_number_employees 
+From(Select Department_Name, 
+    Count(Employee_Number) as count_of_employees,
+    Sum(Absent_Hours)as Time_Off,
+    AVG(Age) as Average_Age 
+From hr
+Where Length_Service > 10 AND Department_Name NOT IN ('Customer Service','Dairy','Meats','Bakery','Produce','Processed Foods')
+GROUP BY Department_Name) insights_from_length_service
+ 
+-------------------------------------------------------------------------------------------------------
+--Subquery
+--Age insights
 
-
-
-
---Shows by department the total amount of absenteeism
-select Department_Name, Avg_Length_of_Service, Total_Time_Off from hrsummary
-Order by Total_Time_Off desc
-
-
---Shows the number of employees, Time_off_Average_Age for those workers working with company up to 10 years and more
---than 11 years
-Select Count(Employee_Number) count_of_employees,sum(Absent_Hours)as Time_Off,AVG(Age) as Average_Age from hr
-Where Length_Service between 0 AND 10.99--Length_Service >= 11
-
-
---Shows are age plays a factor in absenteeism
-Select Count(Employee_Number) count_of_employees,sum(Absent_Hours)as Time_Off,AVG(Length_Service) as Length_of_Service from hr
-Where Age Between 18 AND 30 --Between 31 AND 65
-
-
-
-
-
+Select 
+    Sum(count_of_employees)as c_of_employees,
+    SUM(t_absent_hours)as a_absent_hours,
+    AVG(avg_length_service) as avg_length_service 
+From
+(Select 
+    Department_Name,
+    Count(Employee_Number) count_of_employees,
+    SUM(Absent_Hours)as t_absent_hours,
+    AVG(Length_Service) as avg_length_service
+From hr
+Where Age >=31 and Age <=65 AND Age IS NOT NULL
+GROUP BY Department_Name) Age_insights
+WHERE Department_Name IN ('Customer Service','Dairy','Meats','Bakery','Produce','Processed Foods')
 
