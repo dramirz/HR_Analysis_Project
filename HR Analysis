@@ -56,13 +56,14 @@ GROUP BY Gender, Job_Title, Department_Name, Job_Title
 
 Select 
     Sum(t_time_off)as t_time_off,
-    Sum(n_total_employees) as n_empmloyees,
+    Sum(n_total_employees) as n_total_empmloyees,
     AVG(avg_length_of_service)as avg_length_of_service,
     AVG(avg_time_off)as avg_time_off from
 (Select 
     Dense_Rank() over(order by Total_Time_Off desc) as Ranking,
     Sum(Total_Time_Off) as t_time_off,
-    Sum(Number_of_Employees) as n_total_employees,Department_Name,
+    Sum(Number_of_Employees) as n_total_employees,
+    Department_Name,
     Avg(Avg_Length_of_Service) as avg_length_of_service,
     AVG(Avg_Time_Off) as avg_time_off
 From
@@ -78,7 +79,7 @@ Select
     Sum(count_of_employees) as t_number_employees 
 From(Select Department_Name, 
     Count(Employee_Number) as count_of_employees,
-    Sum(Absent_Hours)as Time_Off,
+    Sum(Absent_Hours) as Total_Time_Off,
     AVG(Age) as Average_Age 
 From hr
 Where Length_Service > 10 AND Department_Name NOT IN ('Customer Service','Dairy','Meats','Bakery','Produce','Processed Foods')
@@ -89,15 +90,15 @@ GROUP BY Department_Name) insights_from_length_service
 --Age insights
 
 Select 
-    Sum(count_of_employees)as c_of_employees,
-    SUM(t_absent_hours)as a_absent_hours,
-    AVG(avg_length_service) as avg_length_service 
+    Sum(number_of_employees)as t_number_employees,
+    SUM(Total_Time_Off)as t_time_off,
+    AVG(Avg_Length_Service) as avg_length_service 
 From
 (Select 
     Department_Name,
-    Count(Employee_Number) count_of_employees,
-    SUM(Absent_Hours)as t_absent_hours,
-    AVG(Length_Service) as avg_length_service
+    Count(Employee_Number) as number_of_employees,
+    SUM(Absent_Hours) as Total_Time_Off,
+    AVG(Length_Service) as Avg_Length_Service
 From hr
 Where Age >=31 and Age <=65 AND Age IS NOT NULL
 GROUP BY Department_Name) Age_insights
